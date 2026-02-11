@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DarFarePredictor</title>
+<style>
+    /* Reset default styling */
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+
+    body {
+        background: linear-gradient(to right, #4facfe, #00f2fe);
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+    }
+
+    .container {
+        background: white;
+        padding: 40px;
+        border-radius: 15px;
+        box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+        max-width: 600px;
+        width: 100%;
+    }
+
+    h1 {
+        text-align: center;
+        margin-bottom: 30px;
+        color: #333;
+        font-size: 2rem;
+    }
+
+    form {
+        display: flex;
+        flex-direction: column;
+    }
+
+    label {
+        margin-bottom: 5px;
+        font-weight: 600;
+        color: #555;
+    }
+
+    input, select {
+        padding: 10px;
+        margin-bottom: 20px;
+        border-radius: 8px;
+        border: 1px solid #ccc;
+        font-size: 1rem;
+        transition: 0.3s;
+    }
+
+    input:focus, select:focus {
+        border-color: #4facfe;
+        outline: none;
+        box-shadow: 0 0 5px rgba(79,172,254,0.5);
+    }
+
+    .submit-btn {
+        padding: 15px;
+        background: #4facfe;
+        border: none;
+        border-radius: 10px;
+        color: white;
+        font-weight: 700;
+        font-size: 1.1rem;
+        cursor: pointer;
+        transition: 0.3s;
+    }
+
+    .submit-btn:hover {
+        background: #00f2fe;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+
+    .result {
+        margin-top: 20px;
+        padding: 15px;
+        border-radius: 10px;
+        background: #f0f9ff;
+        font-size: 1.2rem;
+        text-align: center;
+        color: #333;
+        font-weight: bold;
+    }
+</style>
+</head>
+<body>
+<div class="container">
+    <h1>DarTaxAI</h1>
+    <form id="fareForm">
+        <label for="pickup_lat">Pickup Latitude</label>
+        <input type="number" id="pickup_lat" name="pickup_lat" step="0.0001" required value="-6.80">
+
+        <label for="pickup_lng">Pickup Longitude</label>
+        <input type="number" id="pickup_lng" name="pickup_lng" step="0.0001" required value="39.25">
+
+        <label for="dropoff_lat">Dropoff Latitude</label>
+        <input type="number" id="dropoff_lat" name="dropoff_lat" step="0.0001" required value="-6.75">
+
+        <label for="dropoff_lng">Dropoff Longitude</label>
+        <input type="number" id="dropoff_lng" name="dropoff_lng" step="0.0001" required value="39.20">
+
+        <label for="trip_minutes">Trip Duration (minutes)</label>
+        <input type="number" id="trip_minutes" name="trip_minutes" min="1" required value="20">
+
+        <label for="hour">Hour (0-23)</label>
+        <input type="number" id="hour" name="hour" min="0" max="23" required value="17">
+
+        <label for="day_of_week">Day of Week (0=Mon, 6=Sun)</label>
+        <input type="number" id="day_of_week" name="day_of_week" min="0" max="6" required value="4">
+
+        <label for="is_rush_hour">Rush Hour</label>
+        <select id="is_rush_hour" name="is_rush_hour">
+            <option value="1" selected>Yes</option>
+            <option value="0">No</option>
+        </select>
+
+        <label for="is_weekend">Weekend</label>
+        <select id="is_weekend" name="is_weekend">
+            <option value="0" selected>No</option>
+            <option value="1">Yes</option>
+        </select>
+
+        <button type="submit" class="submit-btn">Predict Fare</button>
+    </form>
+
+    <div id="result" class="result"></div>
+</div>
+
+<script>
+document.getElementById("fareForm").addEventListener("submit", function(e) {
+    e.preventDefault();
+    // Here you would call your backend API to get the prediction
+    // For demo, we'll just calculate a dummy fare
+    const distance = Math.abs(document.getElementById("pickup_lat").value - document.getElementById("dropoff_lat").value) +
+                     Math.abs(document.getElementById("pickup_lng").value - document.getElementById("dropoff_lng").value);
+    const trip_minutes = document.getElementById("trip_minutes").value;
+    const dummyFare = 2000 + (distance * 1200) + (trip_minutes * 50);
+    document.getElementById("result").innerText = `Estimated Fare: TZS ${Math.round(dummyFare)}`;
+});
+</script>
+</body>
+</html>
