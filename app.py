@@ -1,143 +1,129 @@
 import streamlit as st
 from streamlit.components.v1 import html
 
-st.set_page_config(page_title="DarFarePredictor", layout="wide")
+st.set_page_config(page_title="DarTaxAI", layout="wide")
 
-st.title("🚕 Dar es Salaam Live Ride Navigator")
-st.write("Choose your current location and destination to estimate distance and fare.")
+# ---------------- Dashboard Header ----------------
+st.markdown(
+    """
+    <style>
+    .metric-box {
+        background: #ffffff;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0px 2px 8px rgba(0,0,0,0.1);
+        text-align: center;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
+st.title("🚕 DarFarePredictor Dashboard")
+st.write("Live GPS → Route distance → Fare estimation")
+
+col1, col2, col3 = st.columns(3)
+
+col1.markdown("<div class='metric-box'><h3>Base Fare</h3><h2>2000 TZS</h2></div>", unsafe_allow_html=True)
+col2.markdown("<div class='metric-box'><h3>Per KM</h3><h2>700 TZS</h2></div>", unsafe_allow_html=True)
+col3.markdown("<div class='metric-box'><h3>City</h3><h2>Dar es Salaam</h2></div>", unsafe_allow_html=True)
+
+st.markdown("---")
+
+# ---------------- Live Map + Fare Logic ----------------
 map_html = """
 <!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css"/>
 
 <style>
-body {
-  margin: 0;
-  font-family: Arial, sans-serif;
-}
-
-.controls {
-  padding: 10px;
-  background: white;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-button {
-  padding: 8px 14px;
-  border: none;
-  background: #1e90ff;
-  color: white;
-  cursor: pointer;
-  border-radius: 4px;
-}
-
-#info {
-  font-weight: bold;
-}
-
 #map {
   height: 520px;
+  border-radius: 10px;
+}
+
+.info-box {
+  padding: 10px;
+  font-size: 16px;
+  font-weight: bold;
 }
 </style>
 </head>
 
 <body>
 
-<div class="controls">
-  <button onclick="setPickup()">Use Current Location</button>
-  <span id="info">Select destination on map</span>
-</div>
-
+<div class="info-box" id="info">Allow GPS & click map to select destination</div>
 <div id="map"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
 
 <script>
+var BASE_FARE = 2000;
+var COST_PER_KM = 700;
+
 var map = L.map('map').setView([-6.8, 39.25], 13);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '© OpenStreetMap'
 }).addTo(map);
 
-var pickupMarker = null;
-var destinationMarker = null;
-var routeLine = null;
+var userLat, userLng;
+var routingControl = null;
 
-// Haversine distance (km)
-function haversine(lat1, lon1, lat2, lon2) {
-  const R = 6371;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a =
-    Math.sin(dLat/2) ** 2 +
-    Math.cos(lat1 * Math.PI/180) *
-    Math.cos(lat2 * Math.PI/180) *
-    Math.sin(dLon/2) ** 2;
+// Get GPS location
+navigator.geolocation.getCurrentPosition(
+  function(pos) {
+    userLat = pos.coords.latitude;
+    userLng = pos.coords.longitude;
 
-  return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-function updateRoute() {
-  if (pickupMarker && destinationMarker) {
-    var p = pickupMarker.getLatLng();
-    var d = destinationMarker.getLatLng();
-
-    var distance = haversine(p.lat, p.lng, d.lat, d.lng).toFixed(2);
-
-    document.getElementById("info").innerText =
-      "Distance: " + distance + " km";
-
-    if (routeLine) {
-      map.removeLayer(routeLine);
-    }
-
-    routeLine = L.polyline([p, d], { dashArray: '5,10' }).addTo(map);
-  }
-}
-
-// Pickup using GPS
-function setPickup() {
-  navigator.geolocation.getCurrentPosition(function(position) {
-    var lat = position.coords.latitude;
-    var lng = position.coords.longitude;
-
-    if (pickupMarker) {
-      map.removeLayer(pickupMarker);
-    }
-
-    pickupMarker = L.marker([lat, lng], { draggable: true })
+    L.marker([userLat, userLng])
       .addTo(map)
-      .bindPopup("Pickup Location")
+      .bindPopup("Your Location")
       .openPopup();
 
-    pickupMarker.on('dragend', updateRoute);
-    map.setView([lat, lng], 16);
-    updateRoute();
-  }, function() {
-    alert("Location permission denied");
-  });
-}
+    map.setView([userLat, userLng], 15);
+  },
+  function() {
+    alert("GPS permission denied");
+  }
+);
 
-// Destination by map click
+// Select destination by clicking map
 map.on('click', function(e) {
-  if (destinationMarker) {
-    map.removeLayer(destinationMarker);
+
+  if (!userLat) {
+    alert("Waiting for GPS location");
+    return;
   }
 
-  destinationMarker = L.marker(e.latlng, { draggable: true })
-    .addTo(map)
-    .bindPopup("Destination")
-    .openPopup();
+  if (routingControl) {
+    map.removeControl(routingControl);
+  }
 
-  destinationMarker.on('dragend', updateRoute);
-  updateRoute();
+  routingControl = L.Routing.control({
+    waypoints: [
+      L.latLng(userLat, userLng),
+      L.latLng(e.latlng.lat, e.latlng.lng)
+    ],
+    routeWhileDragging: false,
+    addWaypoints: false,
+    draggableWaypoints: false,
+    show: false
+  }).addTo(map);
+
+  routingControl.on('routesfound', function(event) {
+    var route = event.routes[0];
+    var distanceKm = (route.summary.totalDistance / 1000).toFixed(2);
+    var fare = Math.round(BASE_FARE + (distanceKm * COST_PER_KM));
+
+    document.getElementById("info").innerHTML =
+      "Distance: " + distanceKm + " km | Estimated Fare: " + fare + " TZS";
+  });
 });
 </script>
 
@@ -146,3 +132,6 @@ map.on('click', function(e) {
 """
 
 html(map_html, height=600)
+
+st.markdown("---")
+st.caption("⚠️ Fare is an estimate for demonstration purposes only.")
